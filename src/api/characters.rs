@@ -71,9 +71,8 @@ impl Character for WhiteSpaceCharacter {
 
 #[cfg(test)]
 mod tests {
-    use crate::api::characters::{Character, CharacterClass};
-
     use super::WhiteSpaceCharacter;
+    use crate::api::characters::{Character, CharacterClass};
 
     #[test]
     fn test_white_space_char_class() {
