@@ -1,74 +1,63 @@
 use std::{
-    fs::File,
+    fmt::Write,
+    fs::{self, File},
     io::{self, Read},
     str,
 };
 
-use crate::api::structure;
+use bstr::ByteSlice;
+use nom::{
+    bytes::complete::{tag, take, take_while1},
+    character::is_alphabetic,
+    sequence::Tuple,
+    AsBytes, IResult,
+};
 
-/// Opens a local PDF file and reads its content into associated
-/// associated structs:
-///  - Header
-///  - Body
-///  - XRef Table
-///  - Trailer
-#[derive(Debug, Clone, Copy)]
-struct PDFContent {
-    path: &'static str,
+use super::structure::Header;
+
+pub fn read_bytes(path: &str) -> Result<Vec<u8>, io::Error> {
+    let f = fs::read(path)?;
+
+    Ok(f)
 }
 
-impl PDFContent {
-    fn new(path: &'static str) -> Self {
-        Self { path }
+pub fn read_header(data: &Vec<u8>) -> IResult<&str, Header> {
+    // The defined pattern to match against use bstr
+    let pattern = "%PDF-";
+    // The bytes offset defined in the PDF standrd from the initial header byte
+    // to End
+    let offset = 15; // Needs to be 16, but for testing it's 15 due to non-UTF8 error
+    let mut matches = vec![];
+    for tag in data.find_iter(pattern) {
+        matches.push(tag);
     }
+    let index = matches[0];
+    let slice = &data[index..=offset];
+    let slice = str::from_utf8(slice).unwrap();
+    println!("{slice:?}");
 
-    fn read_bytes(&self) -> Result<Vec<u8>, io::Error> {
-        let mut f = File::open(self.path)?;
-        let mut buffer = Vec::new();
+    let clear_pdf_tag = tag("%PDF-");
+    let take3 = take(3usize);
+    let (input, (_, version)) = (clear_pdf_tag, take3).parse(slice)?;
+    let header = Header {
+        version: version.to_string(),
+        comment: None,
+    };
 
-        f.read_to_end(&mut buffer)?;
-        Ok(buffer)
-    }
+    Ok((input, header))
 }
 
 #[cfg(test)]
 mod tests {
-    use std::{
-        fs::File,
-        io::{self, BufRead, BufReader},
-    };
+    use std::io;
 
-    use crate::api::structure;
-
-    use super::PDFContent;
-
-    // #[test]
-    // fn read_bytes_from_local_file() -> Result<(), io::Error> {
-    //     let buffer = PDFContent::new("HelloWorld.pdf").read_bytes()?;
-    //     for byte in buffer {
-    //         println!("Byte {} as ASCII {}", byte, byte as char)
-    //     }
-    //     Ok(())
-    // }
+    use super::{read_bytes, read_header};
 
     #[test]
-    fn read_header_from_local_file() -> Result<(), io::Error> {
-        let f = File::open("HelloWorld.pdf")?;
-        let mut reader = BufReader::new(f);
-        let mut text = String::new();
-        let mut comment = String::new();
-
-        reader.read_line(&mut text)?;
-        reader.read_line(&mut comment)?;
-        let version = &mut text.split_at(text.find('-').unwrap() + 1);
-        let header = structure::Header {
-            text: text.trim().to_string(),
-            version: format!("PDF Version {}", version.1.trim()),
-            comment: comment.trim().to_string(),
-        };
-
-        println!("{:#?}", header);
-
+    fn test_header() -> Result<(), io::Error> {
+        let data = read_bytes("HelloWorld.pdf")?;
+        let (input, major) = read_header(&data).unwrap();
+        println!("Input: {input:?}\nMajor: {major:?}");
         Ok(())
     }
 }
