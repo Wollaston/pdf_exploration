@@ -6,9 +6,8 @@ use nom::{
     bytes::complete::{tag, take},
     character::complete::{digit1, line_ending, space0},
     combinator::{map, map_res},
-    error::{Error, ErrorKind},
-    multi::{count, many0, many1},
-    sequence::{terminated, tuple, Tuple},
+    multi::count,
+    sequence::{tuple, Tuple},
     IResult,
 };
 
@@ -71,9 +70,9 @@ pub fn read_header(data: &[u8], start_offset: usize) -> IResult<&[u8], structure
 }
 
 pub fn read_xref(data: &[u8], start_offset: usize) -> IResult<&[u8], structure::CrossRefTable> {
-    let take_obj_number = map_res(digit1, |d: &[u8]| d.to_str().unwrap().parse::<i32>());
+    let take_obj_number = map_res(digit1, |d: &[u8]| d.to_str().unwrap().parse::<usize>());
     let take_space = take(1usize);
-    let take_num_objects = map_res(digit1, |d: &[u8]| d.to_str().unwrap().parse::<i32>());
+    let take_num_objects = map_res(digit1, |d: &[u8]| d.to_str().unwrap().parse::<usize>());
     let take_line_ending = line_ending;
     let slice = &data[start_offset..];
 
@@ -85,10 +84,8 @@ pub fn read_xref(data: &[u8], start_offset: usize) -> IResult<&[u8], structure::
     )
         .parse(slice)?;
 
-    let (input, subsection) =
-        read_xref_subsection(input, 0, num_objects.try_into().unwrap()).unwrap();
-    let mut subsections: Vec<Subsection> = vec![];
-    subsections.push(subsection);
+    let (input, subsection) = read_xref_subsection(input, obj_number, num_objects).unwrap();
+    let subsections: Vec<Subsection> = vec![subsection];
 
     let cross_ref_table = CrossRefTable { subsections };
 
