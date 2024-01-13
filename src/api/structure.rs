@@ -78,9 +78,7 @@ pub struct Body {
 ///
 #[derive(Debug)]
 pub struct CrossRefTable {
-    pub first_object_object_number: i32,
-    pub num_entries: i32,
-    pub subsections: Option<Vec<Subsection>>,
+    pub subsections: Vec<Subsection>,
 }
 
 ///
@@ -151,9 +149,9 @@ pub enum ObjectTypes {
 ///
 #[derive(Debug)]
 pub struct Subsection {
-    object_number: i32,
-    num_entries: i32,
-    entries: Vec<SubsectionEntry>,
+    pub object_number: usize,
+    pub num_entries: usize,
+    pub entries: Vec<SubsectionEntry>,
 }
 
 ///
@@ -174,7 +172,7 @@ pub struct Subsection {
 ///
 #[derive(Debug)]
 pub struct SubsectionEntry {
-    byte_offset: i32,
-    generation_number: i32,
-    in_use: bool,
+    pub byte_offset: i32,
+    pub generation_number: i32,
+    pub in_use: bool,
 }

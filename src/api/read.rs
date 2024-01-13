@@ -1,17 +1,18 @@
-use std::{fs, io, ops::Deref, str};
+use std::{fs, io};
 
 use aho_corasick::AhoCorasick;
 use bstr::ByteSlice;
 use nom::{
-    bytes::complete::{tag, take, take_while1},
-    character::{complete::digit1, is_digit},
-    combinator::map_res,
-    number::complete::be_i32,
-    sequence::Tuple,
-    IResult, ParseTo,
+    bytes::complete::{tag, take},
+    character::complete::{digit1, line_ending, space0},
+    combinator::{map, map_res},
+    error::{Error, ErrorKind},
+    multi::{count, many0, many1},
+    sequence::{terminated, tuple, Tuple},
+    IResult,
 };
 
-use crate::api::structure;
+use crate::api::structure::{self, Subsection, SubsectionEntry};
 
 use super::structure::CrossRefTable;
 
@@ -73,27 +74,77 @@ pub fn read_xref(data: &[u8], start_offset: usize) -> IResult<&[u8], structure::
     let take_obj_number = map_res(digit1, |d: &[u8]| d.to_str().unwrap().parse::<i32>());
     let take_space = take(1usize);
     let take_num_objects = map_res(digit1, |d: &[u8]| d.to_str().unwrap().parse::<i32>());
+    let take_line_ending = line_ending;
     let slice = &data[start_offset..];
 
-    let (input, (obj_number, _, num_objects)) =
-        (take_obj_number, take_space, take_num_objects).parse(slice)?;
+    let (input, (obj_number, _, num_objects, _)) = (
+        take_obj_number,
+        take_space,
+        take_num_objects,
+        take_line_ending,
+    )
+        .parse(slice)?;
 
-    let cross_ref_table = CrossRefTable {
-        first_object_object_number: obj_number,
-        num_entries: num_objects,
-        subsections: None,
-    };
+    let (input, subsection) =
+        read_xref_subsection(input, 0, num_objects.try_into().unwrap()).unwrap();
+    let mut subsections: Vec<Subsection> = vec![];
+    subsections.push(subsection);
 
-    println!("{:?}", cross_ref_table);
+    let cross_ref_table = CrossRefTable { subsections };
+
+    println!("{:#?}", cross_ref_table);
 
     Ok((input, cross_ref_table))
+}
+
+pub fn read_xref_subsection(
+    data: &[u8],
+    start_offset: usize,
+    num_subsections: usize,
+) -> IResult<&[u8], Subsection> {
+    let slice = &data[start_offset..];
+
+    let (input, subsections) = read_subsections(slice, num_subsections).unwrap();
+    let subsection = Subsection {
+        object_number: start_offset,
+        num_entries: num_subsections,
+        entries: subsections,
+    };
+
+    Ok((input, subsection))
+}
+
+pub fn read_subsections(
+    input: &[u8],
+    num_subsections: usize,
+) -> IResult<&[u8], Vec<SubsectionEntry>> {
+    count(read_subsection, num_subsections)(input)
+}
+
+pub fn read_subsection(input: &[u8]) -> IResult<&[u8], SubsectionEntry> {
+    map(
+        tuple((
+            take::<usize, &[u8], _>(10usize),
+            take(1usize),
+            take(5usize),
+            take(1usize),
+            take(1usize),
+            space0,
+            line_ending,
+        )),
+        |(byte_offset, _, gen_number, _, is_active, _, _)| SubsectionEntry {
+            byte_offset: byte_offset.to_str().unwrap().parse::<i32>().unwrap(),
+            generation_number: gen_number.to_str().unwrap().parse::<i32>().unwrap(),
+            in_use: true,
+        },
+    )(input)
 }
 
 #[cfg(test)]
 mod tests {
     use std::io;
 
-    use super::{read_bytes, read_file, read_header};
+    use super::read_file;
 
     #[test]
     fn test_file() -> Result<(), io::Error> {
