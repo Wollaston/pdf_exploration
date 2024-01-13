@@ -54,7 +54,7 @@ pub struct PDF {
 #[derive(Debug)]
 pub struct Header {
     pub version: String,
-    pub comment: Option<String>,
+    pub comment: bool,
 }
 
 ///
@@ -67,7 +67,7 @@ pub struct Header {
 /// Accordingly, the Body struct contains a Vec of Objects.
 ///
 #[derive(Debug)]
-struct Body {
+pub struct Body {
     objects: Vec<Object>,
 }
 
@@ -77,8 +77,10 @@ struct Body {
 /// containing the keyword "xref" and subsections following.
 ///
 #[derive(Debug)]
-struct CrossRefTable {
-    subsections: Vec<Subsection>,
+pub struct CrossRefTable {
+    pub first_object_object_number: i32,
+    pub num_entries: i32,
+    pub subsections: Option<Vec<Subsection>>,
 }
 
 ///
@@ -98,7 +100,7 @@ struct CrossRefTable {
 /// of the PDF ISO 32000-2:2020 spec.
 ///
 #[derive(Debug)]
-struct Trailer {
+pub struct Trailer {
     entries: Vec<(TrailerKey, String)>,
 }
 
@@ -118,7 +120,7 @@ pub enum TrailerKey {
 /// can be refered to by other objects as an "Indirect Object."
 ///
 #[derive(Debug)]
-struct Object {
+pub struct Object {
     object_number: i32,
     generation_number: i32,
 }
@@ -148,7 +150,7 @@ pub enum ObjectTypes {
 /// It is then followed by the subsection entries.
 ///
 #[derive(Debug)]
-struct Subsection {
+pub struct Subsection {
     object_number: i32,
     num_entries: i32,
     entries: Vec<SubsectionEntry>,
@@ -171,7 +173,7 @@ struct Subsection {
 /// Accordingly, each subsection entry is exactly 20-bytes.
 ///
 #[derive(Debug)]
-struct SubsectionEntry {
+pub struct SubsectionEntry {
     byte_offset: i32,
     generation_number: i32,
     in_use: bool,
