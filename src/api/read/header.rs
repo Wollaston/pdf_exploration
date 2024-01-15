@@ -8,6 +8,14 @@ use nom::{
 
 use crate::api::structure;
 
+/// A PDF file contains a one or two line header (usually two lines). The first line
+/// denotes the version of the PDF standard used and includes the PDF file start
+/// keyword "%PDF-", which is followed by the version and an EOL character. The
+/// optional, but common, second line includes a "%" followed by at least four
+/// characters whose codes are greater than 128, denoting that the file contains
+/// binary characters. The absence of this "comment" line indicates the file consists
+/// of only ASCII characters with a maximum code of 128, and it also indicates that
+/// the file can be read as plain text.
 pub fn read_header(input: &[u8]) -> IResult<&[u8], structure::Header> {
     let (input, first_row) = take_first_row(input)?;
     let (input, second_row) = take_second_row(input)?;
@@ -16,23 +24,26 @@ pub fn read_header(input: &[u8]) -> IResult<&[u8], structure::Header> {
 
     let header = structure::Header {
         version: String::from_utf8(version.to_vec()).unwrap(),
-        comment: second_row.is_utf8(),
+        comment: second_row.is_ascii(),
     };
 
     Ok((input, header))
 }
 
+/// Reads the first row of the header, which starts with the start PDF keyword "%PDF-"
+/// and may or may not be the first bytes in the file.
 pub fn take_first_row(input: &[u8]) -> IResult<&[u8], &[u8]> {
     let (input, (_, content, _)) = tuple((multispace0, not_line_ending, multispace0))(input)?;
     Ok((input, content))
 }
 
+/// Reads the second row of the header and determines if it contains non-ASCII characters.
+/// If it does, it flags the comment as "true"; otherwise, if all are ASCII characters,
+/// it is flagged false to indicate that the file does not contain binary characters.
 pub fn take_second_row(input: &[u8]) -> IResult<&[u8], &[u8]> {
     let (input, (_, content, _)) = tuple((multispace0, not_line_ending, multispace0))(input)?;
     Ok((input, content))
 }
-
-// pub fn take_second_row(input: &[u8]) -> IResult<&[u8], &[u8]> {}
 
 #[cfg(test)]
 mod tests {
