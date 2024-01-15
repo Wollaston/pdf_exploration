@@ -8,3 +8,5 @@ pub mod structure;
 
 /// Functionality to read a PDF file.
 pub mod read;
+
+pub mod utils;
