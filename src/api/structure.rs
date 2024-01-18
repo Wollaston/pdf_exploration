@@ -102,7 +102,7 @@ pub struct Trailer {
     entries: Vec<(TrailerKey, String)>,
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Eq)]
 pub enum TrailerKey {
     Size,
     Prev,
@@ -110,17 +110,35 @@ pub enum TrailerKey {
     Encrypt,
     Info,
     ID,
+    Unknown,
 }
 
-///
+#[derive(Debug, PartialEq, Eq)]
+pub enum TrailerValue {
+    Integer(i32),
+    Object(Object),
+    Dictionary(Vec<(String, String)>),
+    Array(Vec<String>),
+    Unknown,
+}
+
 /// A PDF object is constructed of nine basic object types. These objects can
 /// be labeled with an "Object Number" and a "Generation Number" so that they
 /// can be refered to by other objects as an "Indirect Object."
 ///
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Eq)]
 pub struct Object {
-    object_number: i32,
-    generation_number: i32,
+    pub object_number: i32,
+    pub generation_number: i32,
+    pub status: ObjectStatus,
+}
+
+/// Object structs can either be the object defition, or a reference to the object.
+#[derive(Debug, PartialEq, Eq)]
+pub enum ObjectStatus {
+    Definition,
+    Reference,
+    Unknown,
 }
 
 ///

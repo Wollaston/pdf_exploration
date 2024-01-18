@@ -52,7 +52,7 @@ pub fn read_file(path: &str) -> Result<(), io::Error> {
     println!("Trailer Offset: {:?}", trailer_offset);
 
     header::read_header(&data);
-    cross_ref_table::read_xref(&data, xref_offset[0]);
+    cross_ref_table::read_cross_ref_table(&data, xref_offset[0]);
     trailer::read_trailer(&data, trailer_offset[0]);
     objects::read_objects(&data, objects);
 
